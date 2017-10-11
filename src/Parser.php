@@ -65,18 +65,18 @@ class Parser
             foreach($lineTokens as $lineToken) {
 
                 if ( $this->isInComment ) {
-                    continue;
+                    return null;
                 }
 
                 if ( !$this->isInQuotes && !strlen(trim($lineToken)) ) {
-                    continue;
+                    return null;
                 }
 
                 switch( $lineToken ) {
 
                     case "\\":
                         $this->isEscaping = true;
-                        continue;
+                        return null;
                     break;
 
                     case '"':
@@ -117,7 +117,8 @@ class Parser
 
                             $this->temporaryStack = "";
                         }
-                        continue;
+
+                        return null;
                     break;
 
                     case "{":
@@ -133,7 +134,7 @@ class Parser
 
                         $this->pushStack($this->temporaryStack);
                         $this->temporaryStack = "";
-                        continue;
+                        return null;
                     break;
 
                     case "}":
