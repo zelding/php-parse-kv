@@ -5,7 +5,7 @@
  * @author    lyozsi (kristof.dekany@apex-it-services.eu)
  * @copyright internal usage
  *
- * Date: 10/11/17 12:11 PM
+ * Date: 10/11/17 3:15 PM
  */
 
 namespace Zedling\DotaKV;
@@ -13,181 +13,100 @@ namespace Zedling\DotaKV;
 
 class Parser
 {
-    /** @var Tokenizer */
-    protected $tokenizer;
+    protected $name;
 
-    /** @var object */
-    protected $result;
-
-    /** @var \Closure */
-    protected $popStack;
-
-    protected $stack          = [];
-    protected $key            = null;
-    protected $value          = null;
-    protected $temporaryStack = "";
-    protected $isInQuotes     = false;
-    protected $isInComment    = false;
-    protected $isEscaping     = false;
-    protected $currentResult  = [];
-
-    public function __construct()
+    /**
+     * Constructor
+     *
+     * @param string $name Root section name
+     */
+    public function __construct($name = null)
     {
-        $this->tokenizer = new Tokenizer();
-
-        $this->stack          = [];
-        $this->key            = null;
-        $this->value          = null;
-        $this->temporaryStack = "";
-        $this->isInQuotes     = false;
-        $this->isInComment    = false;
-        $this->isEscaping     = false;
-
-        $this->result = [
-            "values" => []
-        ];
-
-        $this->currentResult = $this->result;
-
-        $this->popStack = function () {
-            $this->rootPopStack();
-        };
+        $this->name = $name;
     }
 
-    public function loadRawData(string $data)
+    /**
+     * Loads key values data from a string or file
+     *
+     * @param string $string String or file to load
+     *
+     * @return array
+     */
+    public function load($string)
     {
-        $lines = $this->tokenizer->tokenizeKVData($data);
+        // Use token_get_all() to easily ignore comments and whitespace
+        $tokens = token_get_all("<?php\n".$string."\n?>");
+        $data   = $this->_parse($tokens);
+        // Strip root section
+        $data = reset($data);
 
-        foreach($lines as $index => $line) {
+        return $data;
+    }
 
-            $lineTokens = $line["tokens"];
+    /**
+     * Recursively parses key values data from tokens
+     *
+     * @param array $tokens Tokens received from token_get_all()
+     *
+     * @return array
+     */
+    private function _parse(&$tokens)
+    {
+        $data = array();
+        $key  = null;
 
-            foreach($lineTokens as $lineToken) {
-
-                if ( $this->isInComment ) {
-                    break;
-                }
-
-                if ( !$this->isInQuotes && !strlen(trim($lineToken)) ) {
-                    break;
-                }
-
-                switch( $lineToken ) {
-
-                    case "\\":
-                        $this->isEscaping = true;
-                    break 2;
-
-
-                    case '"':
-                        if ( $this->isEscaping ) {
-                            $this->isEscaping = false;
-                            break 2;
-                        }
-
-                        $this->isInQuotes = !$this->isInQuotes;
-
-                        if ( !$this->isInQuotes ) {
-
-                            switch( true ) {
-
-                                case !$this->key:
-                                    $this->key = $this->temporaryStack;
-                                break;
-
-                                case $this->value === null:
-                                    $this->value = $this->temporaryStack;
-                                break;
-
-                                case $this->isInComment:
-                                    // do nothing, this a comment
-                                break;
-
-                                case $this->key && $this->value:
-                                    $this->currentResult[ $this->key ] = $this->value;
-
-                                    $this->key   = $this->temporaryStack;
-                                    $this->value = null;
-                                break;
-
-                                default:
-                                    throw new \Exception("Too many values on line: {$line['line']}");
-                                break;
-                            }
-
-                            $this->temporaryStack = "";
-                        }
-
-                    break 2;
-
-                    case "{":
-                        if ( !$this->temporaryStack ) {
-                            if ( $this->key && !$this->value ) {
-                                $this->temporaryStack = $this->key;
-                                $this->key            = null;
-                            }
-                            else {
-                                throw new \Exception("Unexpected \"{\" character on line: {$line['line']}");
-                            }
-                        }
-
-                        $this->pushStack($this->temporaryStack);
-                        $this->temporaryStack = "";
-
-                    break 2;
-
-                    case "}":
-                        ($this->popStack)();
-                    break 2;
-                }
-
-                if ( $this->isInQuotes ) {
-                    throw new \Exception("Unmatched close quotation on line: {$line['line']}");
-                }
-
-                if ( !empty($this->temporaryStack) ) {
-                    $this->temporaryStack = "";
-                }
-
-                if ( $this->key && $this->value === null ) {
-                    $this->temporaryStack = $this->key;
-                }
-                elseif( $this->key !== null && $this->value !== null ) {
-                     $this->currentResult[ $this->key ] = $this->value;
-                }
-
-                $this->key         = null;
-                $this->value       = null;
-                $this->isInComment = false;
+        // Use each() so the array cursor is also advanced
+        // when the function is called recursively
+        while (list(, $token) = each($tokens)) {
+            // New section
+            if ($token == '{') {
+                // Recursively parse section
+                $data[ $key ] = $this->_parse($tokens);
+                $key          = null;
             }
+            // End section
+            elseif ($token == '}') {
+                return $data;
+            }
+            // Key or value
+            else {
+                $value = $token[1];
+                $type  = $token[0];
 
+                if ( T_CONSTANT_ENCAPSED_STRING === $type ) {
+                    // Strip surrounding quotes, then parse as a string
+                    $value = substr($value, 1, -1);
+                }
+
+                if (T_CONSTANT_ENCAPSED_STRING === $type || T_STRING === $type) {
+                    // If key is not set, store
+                    if (is_null($key)) {
+                        $key = $value;
+                    }
+                    // Otherwise, it's a key value pair
+                    else {
+                        // If value is already set, treat as an array
+                        // to allow multiple values per key
+                        if (isset($data[ $key ])) {
+                            // If value is not an array, cast
+                            if (!is_array($data[ $key ])) {
+                                $data[ $key ] = (array) $data[ $key ];
+                            }
+
+                            // Add value to array
+                            $data[ $key ][] = $value;
+                        }
+                        // Otherwise, store key value pair
+                        else {
+                            $data[ $key ] = $value;
+                        }
+
+                        $key = null;
+                    }
+                }
+            }
         }
 
-        return $this->result;
-    }
-
-    protected function pushStack(string $keyName)
-    {
-        $popStack     = $this->popStack;
-        $parentResult = $this->currentResult;
-
-        $this->stack[] = $keyName;
-
-        $this->currentResult[ $keyName ] = [
-            "values" => []
-        ];
-
-        $this->currentResult = $this->currentResult[ $keyName ];
-
-        $this->popStack = function () use ($popStack, $parentResult) {
-            array_pop($this->stack);
-
-            $this->popStack      = $popStack;
-            $this->currentResult = $parentResult;
-        };
-    }
-
-    protected function rootPopStack () {
-        throw new \Exception('Unexpected "}"');
+        return $data;
     }
 }
