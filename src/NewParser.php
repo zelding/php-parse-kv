@@ -13,7 +13,7 @@ namespace Zedling\DotaKV;
 
 class NewParser
 {
-    protected $_name;
+    protected $name;
 
     /**
      * Constructor
@@ -21,9 +21,9 @@ class NewParser
      * @param string $name Root section name
      * @param array $data Optional key values data
      */
-    function __construct($name = null, $data = null)
+    public function __construct($name = null, $data = null)
     {
-        $this->_name = $name;
+        $this->name = $name;
     }
 
     /**
@@ -59,7 +59,7 @@ class NewParser
 
         // Use each() so the array cursor is also advanced
         // when the function is called recursively
-        while(list(, $token) = each($tokens))
+        while( $token = next($tokens) )
         {
             // New section
             if($token == '{')
@@ -69,7 +69,7 @@ class NewParser
                 $key        = null;
             }
             // End section
-            else if($token == '}')
+            elseif($token == '}')
             {
                 return $data;
             }
@@ -77,41 +77,42 @@ class NewParser
             else
             {
                 $value = $token[1];
-                switch($token[0])
-                {
-                    case T_CONSTANT_ENCAPSED_STRING:
-                        // Strip surrounding quotes, then parse as a string
-                        $value = substr($value, 1, -1);
-                    case T_STRING:
-                        // If key is not set, store
-                        if(is_null($key))
+
+                if ( $token[0] === T_CONSTANT_ENCAPSED_STRING ) {
+                    // Strip surrounding quotes, then parse as a string
+                    $value = substr($value, 1, -1);
+                }
+
+                if ( $token[0] === T_STRING ) {
+                    // If key is not set, store
+                    if(is_null($key))
+                    {
+                        $key = $value;
+                    }
+                    // Otherwise, it's a key value pair
+                    else
+                    {
+                        // If value is already set, treat as an array
+                        // to allow multiple values per key
+                        if(isset($data[$key]))
                         {
-                            $key = $value;
+                            // If value is not an array, cast
+                            if(!is_array($data[$key]))
+                            {
+                                $data[$key] = (array)$data[$key];
+                            }
+
+                            // Add value to array
+                            $data[$key][] = $value;
                         }
-                        // Otherwise, it's a key value pair
+                        // Otherwise, store key value pair
                         else
                         {
-                            // If value is already set, treat as an array
-                            // to allow multiple values per key
-                            if(isset($data[$key]))
-                            {
-                                // If value is not an array, cast
-                                if(!is_array($data[$key]))
-                                {
-                                    $data[$key] = (array)$data[$key];
-                                }
-
-                                // Add value to array
-                                $data[$key][] = $value;
-                            }
-                            // Otherwise, store key value pair
-                            else
-                            {
-                                $data[$key] = $value;
-                            }
-
-                            $key = null;
+                            $data[$key] = $value;
                         }
+
+                        $key = null;
+                    }
                 }
             }
         }
