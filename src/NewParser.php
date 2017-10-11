@@ -19,7 +19,7 @@ class NewParser
      * Constructor
      *
      * @param string $name Root section name
-     * @param array $data Optional key values data
+     * @param array  $data Optional key values data
      */
     public function __construct($name = null, $data = null)
     {
@@ -36,10 +36,10 @@ class NewParser
     public function load($string)
     {
         // Use token_get_all() to easily ignore comments and whitespace
-        $tokens = token_get_all("<?php\n" . $string . "\n?>");
+        $tokens = token_get_all("<?php\n".$string."\n?>");
         $data   = $this->_parse($tokens);
         // Strip root section
-        $data   = reset($data);
+        $data = reset($data);
 
         return $data;
     }
@@ -59,61 +59,52 @@ class NewParser
 
         // Use each() so the array cursor is also advanced
         // when the function is called recursively
-        while( list(,$token) = each($tokens) )
-        {
+        while (list(, $token) = each($tokens)) {
             // New section
-            if($token == '{')
-            {
+            if ($token == '{') {
                 // Recursively parse section
-                $data[$key] = $this->_parse($tokens);
-                $key        = null;
+                $data[ $key ] = $this->_parse($tokens);
+                $key          = null;
             }
             // End section
-            elseif($token == '}')
-            {
+            elseif ($token == '}') {
                 return $data;
             }
             // Key or value
-            else
-            {
+            else {
                 $value = $token[1];
                 $type  = $token[0];
 
-                if ( T_CONSTANT_ENCAPSED_STRING === $type ) {
+                if (T_CONSTANT_ENCAPSED_STRING === $type) {
                     // Strip surrounding quotes, then parse as a string
                     $value = substr($value, 1, -1);
                 }
 
-                if ( T_CONSTANT_ENCAPSED_STRING === $type || T_STRING === $type ) {
+                if (T_CONSTANT_ENCAPSED_STRING === $type || T_STRING === $type) {
                     // If key is not set, store
-                    if(is_null($key))
-                    {
+                    if (is_null($key)) {
                         $key = $value;
                     }
                     // Otherwise, it's a key value pair
-                    else
-                    {
+                    else {
                         // If value is already set, treat as an array
                         // to allow multiple values per key
-                        if(isset($data[$key]))
-                        {
+                        if (isset($data[ $key ])) {
                             // If value is not an array, cast
-                            if(!is_array($data[$key]))
-                            {
-                                $data[$key] = (array)$data[$key];
+                            if (!is_array($data[ $key ])) {
+                                $data[ $key ] = (array) $data[ $key ];
                             }
 
                             // Add value to array
-                            $data[$key][] = $value;
+                            $data[ $key ][] = $value;
                         }
                         // Otherwise, store key value pair
-                        else
-                        {
-                            $data[$key] = $value;
+                        else {
+                            $data[ $key ] = $value;
                         }
 
-                            $key = null;
-                        }
+                        $key = null;
+                    }
                 }
             }
         }
