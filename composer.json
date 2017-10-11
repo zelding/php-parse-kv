@@ -1,0 +1,20 @@
+{
+    "name": "zedling/php-parse-kv",
+    "keywords": [
+        "dota2",
+        "dota",
+        "kv"
+    ],
+    "authors": [
+        {
+            "name": "zedling",
+            "email": "gammaray.zedling@gmail.com"
+        }
+    ],
+    "require": {},
+    "config": {
+        "platform": {
+            "php": "7.0"
+        }
+    }
+}
