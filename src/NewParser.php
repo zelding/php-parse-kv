@@ -77,42 +77,43 @@ class NewParser
             else
             {
                 $value = $token[1];
+                $type  = $token[0];
 
-                switch($token[0])
-                {
-                    case T_CONSTANT_ENCAPSED_STRING:
-                        // Strip surrounding quotes, then parse as a string
-                        $value = substr($value, 1, -1);
-                    case T_STRING:
-                        // If key is not set, store
-                        if(is_null($key))
+                if ( T_CONSTANT_ENCAPSED_STRING === $type ) {
+                    // Strip surrounding quotes, then parse as a string
+                    $value = substr($value, 1, -1);
+                }
+
+                if ( T_CONSTANT_ENCAPSED_STRING === $type || T_STRING === $type ) {
+                    // If key is not set, store
+                    if(is_null($key))
+                    {
+                        $key = $value;
+                    }
+                    // Otherwise, it's a key value pair
+                    else
+                    {
+                        // If value is already set, treat as an array
+                        // to allow multiple values per key
+                        if(isset($data[$key]))
                         {
-                            $key = $value;
+                            // If value is not an array, cast
+                            if(!is_array($data[$key]))
+                            {
+                                $data[$key] = (array)$data[$key];
+                            }
+
+                            // Add value to array
+                            $data[$key][] = $value;
                         }
-                        // Otherwise, it's a key value pair
+                        // Otherwise, store key value pair
                         else
                         {
-                            // If value is already set, treat as an array
-                            // to allow multiple values per key
-                            if(isset($data[$key]))
-                            {
-                                // If value is not an array, cast
-                                if(!is_array($data[$key]))
-                                {
-                                    $data[$key] = (array)$data[$key];
-                                }
-
-                                // Add value to array
-                                $data[$key][] = $value;
-                            }
-                            // Otherwise, store key value pair
-                            else
-                            {
-                                $data[$key] = $value;
-                            }
-
-                            $key = null;
+                            $data[$key] = $value;
                         }
+
+                        $key = null;
+                    }
                 }
             }
         }
