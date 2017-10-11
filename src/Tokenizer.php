@@ -27,23 +27,25 @@ class Tokenizer
     {
         $lines = explode("\n", $data);
 
-        $lines = array_map(function ($lineString, $index){
-            return [
-                "text"   => trim($lineString),
+        $lineData = [];
+
+        foreach($lines as $index => $line) {
+            $lineData[] = [
+                "text"   => trim($line),
                 "tokens" => [],
                 "line"   => $index + 1
             ];
-        }, $lines);
+        }
 
-        $lines = array_filter($lines, function ($elementData) {
+        $lineData = array_filter($lineData, function ($elementData) {
             return !empty($elementData["text"]);
         });
 
-        $lines = array_filter($lines, function ($elementData) {
+        $lineData = array_filter($lineData, function ($elementData) {
             return substr($elementData["text"], 0, 2) !== "//";
         });
 
-        return array_map([$this, 'tokenizeLine'], $lines);
+        return array_map([$this, 'tokenizeLine'], $lineData);
     }
 
     /**
