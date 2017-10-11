@@ -65,24 +65,24 @@ class Parser
             foreach($lineTokens as $lineToken) {
 
                 if ( $this->isInComment ) {
-                    return null;
+                    break;
                 }
 
                 if ( !$this->isInQuotes && !strlen(trim($lineToken)) ) {
-                    return null;
+                    break;
                 }
 
                 switch( $lineToken ) {
 
                     case "\\":
                         $this->isEscaping = true;
-                        return null;
-                    break;
+                    break 2;
+
 
                     case '"':
                         if ( $this->isEscaping ) {
                             $this->isEscaping = false;
-                            break;
+                            break 2;
                         }
 
                         $this->isInQuotes = !$this->isInQuotes;
@@ -118,8 +118,7 @@ class Parser
                             $this->temporaryStack = "";
                         }
 
-                        return null;
-                    break;
+                    break 2;
 
                     case "{":
                         if ( !$this->temporaryStack ) {
@@ -134,12 +133,12 @@ class Parser
 
                         $this->pushStack($this->temporaryStack);
                         $this->temporaryStack = "";
-                        return null;
-                    break;
+
+                    break 2;
 
                     case "}":
-                        return ($this->popStack)();
-                    break;
+                        ($this->popStack)();
+                    break 2;
                 }
 
                 if ( $this->isInQuotes ) {
@@ -167,7 +166,7 @@ class Parser
         return $this->result;
     }
 
-    protected function pushStack(string $keyName) : void
+    protected function pushStack(string $keyName)
     {
         $popStack     = $this->popStack;
         $parentResult = $this->currentResult;
@@ -186,7 +185,6 @@ class Parser
             $this->popStack      = $popStack;
             $this->currentResult = $parentResult;
         };
-
     }
 
     protected function rootPopStack () {
