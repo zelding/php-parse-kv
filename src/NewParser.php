@@ -112,8 +112,8 @@ class NewParser
                             $data[$key] = $value;
                         }
 
-                        $key = null;
-                    }
+                            $key = null;
+                        }
                 }
             }
         }
