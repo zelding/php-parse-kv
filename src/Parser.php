@@ -99,8 +99,13 @@ class Parser
                         // Otherwise, store key value pair
                         else {
                             //if it is an array of values
-                            if ( substr_count($value, "|") === 0 && substr_count($value, " ") !== 0) {
-                                $value = explode(" ", $value);
+                            if ( substr_count($value, "|") === 0) {
+                                if ( substr_count($value, " ") !== 0 ) {
+                                    $value = explode(" ", $value);
+                                }
+                                elseif ( substr_count($value, ";") !== 0 ) {
+                                    $value = explode(";", $value);
+                                }
                             }
 
                             $data[ $key ] = $value;
