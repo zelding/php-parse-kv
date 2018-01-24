@@ -100,11 +100,11 @@ class Parser
                         else {
                             //if it is an array of values
                             if ( substr_count($value, "|") === 0) {
-                                if ( substr_count($value, " ") !== 0 ) {
-                                    $value = explode(" ", $value);
-                                }
-                                elseif ( substr_count($value, ";") !== 0 ) {
+                                if ( substr_count($value, ";") !== 0 ) {
                                     $value = explode(";", $value);
+                                }
+                                elseif ( substr_count($value, " ") !== 0 ) {
+                                    $value = explode(" ", $value);
                                 }
                             }
 
